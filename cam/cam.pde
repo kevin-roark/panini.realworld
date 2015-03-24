@@ -3,7 +3,7 @@ import processing.video.*;
 Capture cam;
 
 void setup() {
-  size(640, 480); // default size
+  size(1280, 720); // default size
   
   String[] cameras = Capture.list();
   
@@ -26,5 +26,9 @@ void draw() {
     cam.read();
   }
   
+  fill(255, 179, 119);
+  rect(0, 0, width, height);
+  
+  blendMode(DIFFERENCE);
   image(cam, 0, 0);
 }
