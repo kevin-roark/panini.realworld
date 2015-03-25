@@ -20,6 +20,9 @@ float fillRedTarget = 240;
 float fillGreenTarget = 200;
 float fillBlueTarget = 100;
 
+int glowRadius = 5;
+int glowBrightness = 20;
+
 void setup() {
   size(1280, 720); // default size
   
@@ -62,6 +65,8 @@ void draw() {
   }
   
   blend(cam, 0, 0, width, height, 0, 0, width, height, blendingMode);
+  
+  glow(glowRadius, glowBrightness);
 }
 
 void updateMirrorAlpha() {
@@ -70,13 +75,20 @@ void updateMirrorAlpha() {
   
   if (increasingAlpha && mirrorAlpha > alphaLimit) {
     increasingAlpha = false;
-    alphaLimit = random(-75, 15); // set the bottom threshold
+    alphaLimit = random(-45, 2); // set the bottom threshold
   }
   else if (!increasingAlpha && mirrorAlpha < alphaLimit) {
     increasingAlpha = true;
-    alphaLimit = random(30, 140); // set the top threshold
+    alphaLimit = random(10, 80); // set the top threshold
+    
     blendingMode = blendingModes[int(random(blendingModes.length))]; // pick a fresh blending mode
+    updateGlowBrightness();
   }  
+}
+
+void updateGlowBrightness() {
+  glowRadius = int(random(0, 5));
+  glowBrightness = int(random(0, 40)); 
 }
 
 void updateFill() {
@@ -104,4 +116,47 @@ void updateFill() {
     fillBlueTarget = random(40, 160);  
   }
 }
+
+// Following from http://www.openprocessing.org/sketch/5286
+
+void glow(int r, int b) {
+  loadPixels();
+  blur(1); // just adding a little smoothness ...
+  int[] px = new int[pixels.length];
+  arrayCopy(pixels, px);
+  blur(r);
+  mix(px, b);
+  updatePixels();
+}
+ 
+void blur(int dd) {
+   int[] px = new int[pixels.length];
+   for(int d=1<<--dd; d>0; d>>=1) { 
+      for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
+        int p = y*width + x;
+        int e = x >= width-d ? 0 : d;
+        int w = x >= d ? -d : 0;
+        int n = y >= d ? -width*d : 0;
+        int s = y >= (height-d) ? 0 : width*d;
+        int r = ( r(pixels[p+w]) + r(pixels[p+e]) + r(pixels[p+n]) + r(pixels[p+s]) ) >> 2;
+        int g = ( g(pixels[p+w]) + g(pixels[p+e]) + g(pixels[p+n]) + g(pixels[p+s]) ) >> 2;
+        int b = ( b(pixels[p+w]) + b(pixels[p+e]) + b(pixels[p+n]) + b(pixels[p+s]) ) >> 2;
+        px[p] = 0xff000000 + (r<<16) | (g<<8) | b;
+      }
+      arrayCopy(px,pixels);
+   }
+}
+ 
+void mix(int[] px, int n) {
+  for(int i=0; i< pixels.length; i++) {
+    int r = (r(pixels[i]) >> 1)  + (r(px[i]) >> 1) + (r(pixels[i]) >> n)  - (r(px[i]) >> n) ;
+    int g = (g(pixels[i]) >> 1)  + (g(px[i]) >> 1) + (g(pixels[i]) >> n)  - (g(px[i]) >> n) ;
+    int b = (b(pixels[i]) >> 1)  + (b(px[i]) >> 1) + (b(pixels[i]) >> n)  - (b(px[i]) >> n) ;
+    pixels[i] =  0xff000000 | (r<<16) | (g<<8) | b;
+  }
+}
+ 
+int r(color c) {return (c >> 16) & 255; }
+int g(color c) {return (c >> 8) & 255;}
+int b(color c) {return c & 255; }
 
