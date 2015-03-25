@@ -23,6 +23,10 @@ float fillBlueTarget = 100;
 int glowRadius = 5;
 int glowBrightness = 20;
 
+float glitchProbability = 0.05;
+int glitchRegionSize = 10;
+int glitchRegionSizeSquared = 100;
+
 void setup() {
   size(1280, 720); // default size
   
@@ -54,18 +58,34 @@ void draw() {
   fill(fillRed, fillGreen, fillBlue);
   rect(0, 0, width, height);
   
-  // set the camera alpha
+  // set the camera alpha and glitch some shit
   cam.loadPixels();
+  boolean glitch = false;
+  int pixelCount = 0;
   for (int i = 0; i < cam.width; i++) {
     for (int j = 0; j < cam.height; j++) {
+       if (pixelCount % glitchRegionSizeSquared == 0) {
+         glitch = (random(0.0, 1.0) < glitchProbability);
+       }
+      
        int loc = i + j * cam.width;
        color pixel = cam.pixels[loc];
-       cam.pixels[loc] = color(red(pixel), green(pixel), blue(pixel), max(mirrorAlpha, 0));
+       
+       if (glitch) {
+         cam.pixels[loc] = color(pixel <<7 & 0xff, pixel << 4 & 0xaa, pixel & 0xff, max(mirrorAlpha, 0));
+         cam.pixels[loc] += random(24000, 150000);
+       } else {
+         cam.pixels[loc] = color(red(pixel), green(pixel), blue(pixel), max(mirrorAlpha, 0));
+       }
+       
+       pixelCount += 1;
     }
   }
   
+  // blend camera into fill
   blend(cam, 0, 0, width, height, 0, 0, width, height, blendingMode);
   
+  // add glow and blur
   glow(glowRadius, glowBrightness);
 }
 
@@ -75,20 +95,30 @@ void updateMirrorAlpha() {
   
   if (increasingAlpha && mirrorAlpha > alphaLimit) {
     increasingAlpha = false;
-    alphaLimit = random(-45, 2); // set the bottom threshold
+    alphaLimit = random(-25, 2); // set the bottom threshold
   }
   else if (!increasingAlpha && mirrorAlpha < alphaLimit) {
     increasingAlpha = true;
-    alphaLimit = random(10, 80); // set the top threshold
+    alphaLimit = random(10, 130); // set the top threshold
     
     blendingMode = blendingModes[int(random(blendingModes.length))]; // pick a fresh blending mode
-    updateGlowBrightness();
+    updateGlowValues();
+    updateGlitchValues();
   }  
 }
 
-void updateGlowBrightness() {
+void updateGlowValues() {
   glowRadius = int(random(0, 5));
   glowBrightness = int(random(0, 40)); 
+}
+
+void updateGlitchValues() {
+  glitchProbability = random(0.0, 0.5);
+  glitchRegionSize = int(random(5, 30));
+  glitchRegionSizeSquared = glitchRegionSize * glitchRegionSize;
+  
+  println("glitch prob: " + glitchProbability);
+  println("glitch region size: " + glitchRegionSize);
 }
 
 void updateFill() {
@@ -97,7 +127,7 @@ void updateFill() {
   } else if (fillRed > fillRedTarget) {
     fillRed -= FILL_INCREMENT; 
   } else {
-    fillRedTarget = random(200, 255);  
+    fillRedTarget = random(235, 255);  
   }
   
   if (fillGreen < fillGreenTarget) {
@@ -105,7 +135,7 @@ void updateFill() {
   } else if (fillGreen > fillGreenTarget) {
     fillGreen -= FILL_INCREMENT; 
   } else {
-    fillGreenTarget = random(100, 220);  
+    fillGreenTarget = random(120, 200);  
   }
   
   if (fillBlue < fillBlueTarget) {
@@ -113,7 +143,7 @@ void updateFill() {
   } else if (fillBlue > fillBlueTarget) {
     fillBlue -= FILL_INCREMENT; 
   } else {
-    fillBlueTarget = random(40, 160);  
+    fillBlueTarget = random(70, 130);  
   }
 }
 
