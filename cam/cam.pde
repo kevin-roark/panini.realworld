@@ -1,6 +1,6 @@
 import processing.video.*;
 
-float FILL_INCREMENT = 0.05;
+float FILL_INCREMENT = 0.4;
 
 Capture cam;
 
@@ -16,9 +16,9 @@ float fillRed = 255;
 float fillGreen = 179;
 float fillBlue = 119;
 
-float fillRedTarget = 240;
-float fillGreenTarget = 200;
-float fillBlueTarget = 100;
+float fillRedTarget = 245;
+float fillGreenTarget = 185;
+float fillBlueTarget = 125;
 
 int glowRadius = 5;
 int glowBrightness = 20;
@@ -26,6 +26,8 @@ int glowBrightness = 20;
 float glitchProbability = 0.05;
 int glitchRegionSize = 10;
 int glitchRegionSizeSquared = 100;
+int glitchType = 0;
+int[] glitchTypes = {0, 1};
 
 void setup() {
   size(1280, 720); // default size
@@ -71,7 +73,7 @@ void draw() {
        int loc = i + j * cam.width;
        color pixel = cam.pixels[loc];
        
-       if (glitch) {
+       if (glitch && glitchType == 0) {
          cam.pixels[loc] = color(pixel <<7 & 0xff, pixel << 4 & 0xaa, pixel & 0xff, max(mirrorAlpha, 0));
          cam.pixels[loc] += random(24000, 150000);
        } else {
@@ -82,6 +84,24 @@ void draw() {
     }
   }
   
+  if (glitchType == 1) {
+    int glitchRegions = int(glitchProbability * cam.pixels.length / glitchRegionSizeSquared);
+    int halfGlitchRegionSize = int(glitchRegionSize / 2);
+    for (int gl = 0; gl < glitchRegions; gl++) {
+      int idx = int(random(cam.pixels.length));
+      for (int i = idx - halfGlitchRegionSize; i < idx + halfGlitchRegionSize; i++) {
+        for (int j = -halfGlitchRegionSize; j < halfGlitchRegionSize; j++) {
+          int loc = i + j * cam.width;
+          if (loc >= 0 && loc < cam.pixels.length) {
+             color pixel = cam.pixels[loc];
+             cam.pixels[loc] = color(pixel <<7 & 0xff, pixel << 4 & 0xaa, pixel & 0xff, max(mirrorAlpha, 0));
+             cam.pixels[loc] += random(24000, 150000);
+          } 
+        }
+      }
+    }
+  }
+    
   // blend camera into fill
   blend(cam, 0, 0, width, height, 0, 0, width, height, blendingMode);
   
@@ -95,11 +115,11 @@ void updateMirrorAlpha() {
   
   if (increasingAlpha && mirrorAlpha > alphaLimit) {
     increasingAlpha = false;
-    alphaLimit = random(-25, 2); // set the bottom threshold
+    alphaLimit = random(10, 20); // set the bottom threshold
   }
   else if (!increasingAlpha && mirrorAlpha < alphaLimit) {
     increasingAlpha = true;
-    alphaLimit = random(10, 130); // set the top threshold
+    alphaLimit = random(35, 140); // set the top threshold
     
     blendingMode = blendingModes[int(random(blendingModes.length))]; // pick a fresh blending mode
     updateGlowValues();
@@ -113,12 +133,21 @@ void updateGlowValues() {
 }
 
 void updateGlitchValues() {
-  glitchProbability = random(0.0, 0.5);
-  glitchRegionSize = int(random(5, 30));
-  glitchRegionSizeSquared = glitchRegionSize * glitchRegionSize;
+  glitchType = glitchTypes[int(random(glitchTypes.length))];
   
+  if (glitchType == 0) {
+    glitchProbability = random(0.0, 0.2);
+    glitchRegionSize = int(random(3, 15));
+  } else {
+    glitchProbability = random(0.0, 0.2);
+    glitchRegionSize = int(random(20, 60));  
+  }
+  
+  glitchRegionSizeSquared = glitchRegionSize * glitchRegionSize;
+    
   println("glitch prob: " + glitchProbability);
   println("glitch region size: " + glitchRegionSize);
+  println("glitch type: " + glitchType);
 }
 
 void updateFill() {
@@ -127,7 +156,7 @@ void updateFill() {
   } else if (fillRed > fillRedTarget) {
     fillRed -= FILL_INCREMENT; 
   } else {
-    fillRedTarget = random(235, 255);  
+    fillRedTarget = random(245, 255);  
   }
   
   if (fillGreen < fillGreenTarget) {
@@ -135,7 +164,7 @@ void updateFill() {
   } else if (fillGreen > fillGreenTarget) {
     fillGreen -= FILL_INCREMENT; 
   } else {
-    fillGreenTarget = random(120, 200);  
+    fillGreenTarget = random(155, 205);  
   }
   
   if (fillBlue < fillBlueTarget) {
@@ -143,7 +172,7 @@ void updateFill() {
   } else if (fillBlue > fillBlueTarget) {
     fillBlue -= FILL_INCREMENT; 
   } else {
-    fillBlueTarget = random(70, 130);  
+    fillBlueTarget = random(90, 150);  
   }
 }
 
