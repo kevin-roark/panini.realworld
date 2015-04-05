@@ -13,14 +13,14 @@ boolean needsBackgroundUpdate = false;
 // How different must a pixel be to be a foreground pixel
 float bgThreshold = 20;
 
-// cool modes: ADD, SCREEN, OVERLAY, SOFT_LIGHT, DODGE
-int[] blendingModes = {ADD, SCREEN, OVERLAY, SOFT_LIGHT, DODGE};
+// cool modes: ADD, OVERLAY
+int[] blendingModes = {ADD, OVERLAY};
 int blendingMode = blendingModes[0];
 
 // alpha changes
 float mirrorAlpha = 0;
 boolean increasingAlpha = true;
-float alphaLimit = 30;
+float alphaLimit = 150;
 
 // current fill color
 float fillRed = 255;
@@ -171,7 +171,7 @@ void updateMirrorAlpha() {
   }
   else if (!increasingAlpha && mirrorAlpha < alphaLimit) {
     increasingAlpha = true;
-    alphaLimit = random(35, 140); // set the top threshold
+    alphaLimit = random(75, 225); // set the top threshold
     
     blendingMode = blendingModes[int(random(blendingModes.length))]; // pick a fresh blending mode
     updateGlowValues();
@@ -188,10 +188,10 @@ void updateGlitchValues() {
   glitchType = glitchTypes[int(random(glitchTypes.length))];
   
   if (glitchType == 0) {
-    glitchProbability = random(0.0, 0.14);
+    glitchProbability = random(0.0, 0.09);
     glitchRegionSize = int(random(3, 15));
   } else {
-    glitchProbability = random(0.0, 0.06);
+    glitchProbability = random(0.0, 0.03);
     glitchRegionSize = int(random(4, 8));  
   }
   
