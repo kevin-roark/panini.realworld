@@ -1,36 +1,55 @@
+
+// help on removing bg: http://www.learningprocessing.com/examples/chapter-16/example-16-12/
+
 import processing.video.*;
 
-float FILL_INCREMENT = 0.4;
-
+// le webcam
 Capture cam;
+
+// Saved background
+PImage backgroundImage;
+boolean needsBackgroundUpdate = false;
+
+// How different must a pixel be to be a foreground pixel
+float bgThreshold = 20;
 
 // cool modes: ADD, SCREEN, OVERLAY, SOFT_LIGHT, DODGE
 int[] blendingModes = {ADD, SCREEN, OVERLAY, SOFT_LIGHT, DODGE};
 int blendingMode = blendingModes[0];
 
+// alpha changes
 float mirrorAlpha = 0;
 boolean increasingAlpha = true;
 float alphaLimit = 30;
 
+// current fill color
 float fillRed = 255;
 float fillGreen = 179;
 float fillBlue = 119;
 
+// target fill color
 float fillRedTarget = 245;
 float fillGreenTarget = 185;
 float fillBlueTarget = 125;
 
+// transitioning between fill colors
+float FILL_INCREMENT = 0.4;
+
+// glowy parameters
 int glowRadius = 5;
 int glowBrightness = 20;
 
+// glitchy parameters
 float glitchProbability = 0.05;
 int glitchRegionSize = 10;
 int glitchRegionSizeSquared = 100;
 int glitchType = 0;
 int[] glitchTypes = {0, 1};
 
+/// Processing Functions
+
 void setup() {
-  size(1280, 720); // default size
+  size(displayWidth, displayHeight); // full screen size
   
   String[] cameras = Capture.list();
   
@@ -45,42 +64,67 @@ void setup() {
     
     cam = new Capture(this, cameras[1]);
     cam.start();
+    
+    backgroundImage = createImage(cam.width, cam.height, RGB);
   }      
 }
 
 void draw() {
   if (cam.available() == true) {
     cam.read();
+    
+    if (needsBackgroundUpdate) {
+      println("GETTING A NEW BACKGROUND IMAGE");
+      backgroundImage = createImage(cam.width, cam.height, RGB);
+      backgroundImage.copy(cam, 0,0,cam.width,cam.height, 0,0,cam.width,cam.height);
+      backgroundImage.updatePixels(); 
+      needsBackgroundUpdate = false;
+    }
   }
   
   updateFill();
   updateMirrorAlpha();
   
   // give me the orange delight
+  color bgColor = color(fillRed, fillGreen, fillBlue, max(mirrorAlpha, 0));
   fill(fillRed, fillGreen, fillBlue);
   rect(0, 0, width, height);
   
-  // set the camera alpha and glitch some shit
+  // load all the pixels 'cause we gobbing them all to remove background
   cam.loadPixels();
+  backgroundImage.loadPixels();
+  
+  // iterate through each camera pixel (for alpha control, glitching, and bg removal)
   boolean glitch = false;
   int pixelCount = 0;
   for (int i = 0; i < cam.width; i++) {
     for (int j = 0; j < cam.height; j++) {
-       if (pixelCount % glitchRegionSizeSquared == 0) {
-         glitch = (random(0.0, 1.0) < glitchProbability);
-       }
+      if (pixelCount % glitchRegionSizeSquared == 0) {
+        // glitch occurs in regional chunks, so if at a chunk boundary decide if we should glitch
+        glitch = (random(0.0, 1.0) < glitchProbability);
+      }
       
-       int loc = i + j * cam.width;
-       color pixel = cam.pixels[loc];
+      int loc = i + j * cam.width; // 1D pixel loc
+      color pixel = cam.pixels[loc]; // foreground
+      
+      float diff = 1000;
+      if (loc < backgroundImage.pixels.length) {
+        color bgPixel = backgroundImage.pixels[loc]; // background
+        diff = colorDiff(pixel, bgPixel); // foreground <-> background difference
+      }
        
-       if (glitch && glitchType == 0) {
-         cam.pixels[loc] = color(pixel <<7 & 0xff, pixel << 4 & 0xaa, pixel & 0xff, max(mirrorAlpha, 0));
-         cam.pixels[loc] += random(24000, 150000);
-       } else {
-         cam.pixels[loc] = color(red(pixel), green(pixel), blue(pixel), max(mirrorAlpha, 0));
-       }
-       
-       pixelCount += 1;
+      if (glitch && glitchType == 0) {
+        cam.pixels[loc] = color(pixel <<7 & 0xff, pixel << 4 & 0xaa, pixel & 0xff, max(mirrorAlpha, 0));
+        cam.pixels[loc] += random(24000, 150000);
+      }
+      else if (diff < bgThreshold) {
+        cam.pixels[loc] = bgColor;
+      }
+      else {
+        cam.pixels[loc] = color(red(pixel), green(pixel), blue(pixel), max(mirrorAlpha, 0));
+      }
+      
+      pixelCount += 1;
     }
   }
   
@@ -101,6 +145,8 @@ void draw() {
       }
     }
   }
+  
+  cam.updatePixels();
     
   // blend camera into fill
   blend(cam, 0, 0, width, height, 0, 0, width, height, blendingMode);
@@ -108,6 +154,12 @@ void draw() {
   // add glow and blur
   glow(glowRadius, glowBrightness);
 }
+
+void mousePressed() {
+  needsBackgroundUpdate = true;
+}
+
+/// Helper functions
 
 void updateMirrorAlpha() {
   float increment = increasingAlpha? random(0.25, 2.5) : random(-2.5, -0.25);
@@ -136,11 +188,11 @@ void updateGlitchValues() {
   glitchType = glitchTypes[int(random(glitchTypes.length))];
   
   if (glitchType == 0) {
-    glitchProbability = random(0.0, 0.2);
+    glitchProbability = random(0.0, 0.14);
     glitchRegionSize = int(random(3, 15));
   } else {
-    glitchProbability = random(0.0, 0.2);
-    glitchRegionSize = int(random(20, 60));  
+    glitchProbability = random(0.0, 0.06);
+    glitchRegionSize = int(random(4, 8));  
   }
   
   glitchRegionSizeSquared = glitchRegionSize * glitchRegionSize;
@@ -174,6 +226,16 @@ void updateFill() {
   } else {
     fillBlueTarget = random(90, 150);  
   }
+}
+
+float colorDiff(color a, color b) {
+  float r1 = red(a);
+  float g1 = green(a);
+  float b1 = blue(a);
+  float r2 = red(b);
+  float g2 = green(b);
+  float b2 = blue(b);
+  return dist(r1, g1, b1, r2, g2, b2);
 }
 
 // Following from http://www.openprocessing.org/sketch/5286
