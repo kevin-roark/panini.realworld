@@ -28,12 +28,25 @@ float fillGreen = 179;
 float fillBlue = 119;
 
 // target fill color
+float fillRedTargetMin = 245;
+float fillRedTargetMax = 255;
 float fillRedTarget = 245;
+float fillGreenTargetMin = 155;
+float fillGreenTargetMax = 205;
 float fillGreenTarget = 185;
+float fillBlueTargetMin = 95;
+float fillBlueTargetMax = 150;
 float fillBlueTarget = 125;
 
 // transitioning between fill colors
-float FILL_INCREMENT = 0.4;
+int framesToReachFillTarget = 100;
+int incrementalFillCount = 0;
+float fillRedIncrement = (fillRedTarget - fillRed) / framesToReachFillTarget;
+float fillGreenIncrement = (fillGreenTarget - fillGreen) / framesToReachFillTarget;
+float fillBlueIncrement = (fillBlueTarget - fillBlue) / framesToReachFillTarget;
+
+// fill transition count
+int totalFillsTransitioned = 0;
 
 // glowy parameters
 int glowRadius = 5;
@@ -203,29 +216,30 @@ void updateGlitchValues() {
 }
 
 void updateFill() {
-  if (fillRed < fillRedTarget) {
-    fillRed += FILL_INCREMENT; 
-  } else if (fillRed > fillRedTarget) {
-    fillRed -= FILL_INCREMENT; 
-  } else {
-    fillRedTarget = random(245, 255);  
+  // get a fresh target if necessary
+  if (incrementalFillCount == framesToReachFillTarget) {
+    framesToReachFillTarget = (int) random(100, 300);
+    incrementalFillCount = 0;
+    
+    fillRedTarget = random(fillRedTargetMin, fillRedTargetMax);
+    fillGreenTarget = random(fillGreenTargetMin, fillGreenTargetMax);  
+    fillBlueTarget = random(fillBlueTargetMin, fillBlueTargetMax);
+    
+    println("new fill target: " + fillRedTarget + "," + fillGreenTarget + "," + fillBlueTarget);
+    println("i will reach it in " + framesToReachFillTarget + " frames");
+    
+    fillRedIncrement = (fillRedTarget - fillRed) / framesToReachFillTarget;
+    fillGreenIncrement = (fillGreenTarget - fillGreen) / framesToReachFillTarget;
+    fillBlueIncrement = (fillBlueTarget - fillBlue) / framesToReachFillTarget;
+    
+    totalFillsTransitioned += 1;
   }
   
-  if (fillGreen < fillGreenTarget) {
-    fillGreen += FILL_INCREMENT; 
-  } else if (fillGreen > fillGreenTarget) {
-    fillGreen -= FILL_INCREMENT; 
-  } else {
-    fillGreenTarget = random(155, 205);  
-  }
+  fillRed += fillRedIncrement;
+  fillGreen += fillGreenIncrement;
+  fillBlue += fillBlueIncrement;
   
-  if (fillBlue < fillBlueTarget) {
-    fillBlue += FILL_INCREMENT; 
-  } else if (fillBlue > fillBlueTarget) {
-    fillBlue -= FILL_INCREMENT; 
-  } else {
-    fillBlueTarget = random(90, 150);  
-  }
+  incrementalFillCount += 1;
 }
 
 float colorDiff(color a, color b) {
